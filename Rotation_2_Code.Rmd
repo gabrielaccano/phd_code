@@ -1,0 +1,143 @@
+---
+Title: Rotation 2 
+Date: 2/4/2025
+Objective: Look at the timing of regal mating behaviors from 1998 to 2015 using butterfly census data from FIG 
+---
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+```
+
+1. Sort data to only include regals that exhbit oviposition and mating behaviors (behaviors 6 and 8 respectively)
+```{r}
+regal_df<- updated_matrix |> 
+  filter(butterfly_species== "REFR")
+
+
+all_repro_df <- updated_matrix |> filter(Behavior %in% c(6,8))
+
+regal_repro_df<- updated_matrix |> filter (butterfly_species =="REFR" & Behavior %in% c(6,8))
+
+regal_repr_relabel <- regal_repro_df %>%
+  mutate(behavior_type = case_when(
+    Behavior == 6 ~ "ovipositing",
+    Behavior == 8 ~ "mating",
+    TRUE ~ "other"  # This covers any cases where Behavior is neither 6 nor 8
+  ))
+
+view (regal_repro_df)
+```
+
+2. Create a boxplot for each year with julian day on the x axis and number of butterflies with that behavior in the boxes
+```{r}
+regal_repro_df$Julian <- as.factor(regal_repro_df$Julian)
+ggplot(regal_repro_df, aes(x = Julian, y = Year, fill = Behavior)) +
+  geom_boxplot()# +
+  facet_wrap(~ Year, scales = "free_y") +  # Creates separate panels for each year
+  labs(title = "Behavior Timing Across Years", 
+     x = "Behavior", 
+      y = "Julian Day")+
+  scale_x_continuous(labels = scales::number_format(accuracy = 1))
+
+```
+
+```{r}
+behavior_count <- regal_repr_relabel |> 
+  group_by(Year, Julian) |> 
+  summarise(behavior_count= n(), .groups='drop')
+ggplot(behavior_count, aes(x=Julian, y=Behavior_type))+
+  geom_boxplot()+
+  facet_wrap(~Year, scales= 'free_y')+
+  scale_y_continuous(labels= scales::number_format(accuracy = 1))+
+  theme(axis.text.x= element_text(angle =45, hjust=1))
+```
+
+```{r}
+ggplot(all_repro_df, aes(x = Year, y = Julian, fill = Behavior)) +
+  geom_boxplot() +
+  labs(title = "Behavior Timing Across Julian Days by Sex", 
+       x = "Behavior", 
+       y = "Julian Day") +
+  theme_minimal()
+```
+
+```{r}
+all_behavior_count <- all_repro_df |> 
+  group_by(Year, Julian) |> 
+  summarise(behavior_count= n(), .groups='drop')
+ggplot(all_behavior_count, aes(x=Julian, y=behavior_count))+
+  geom_boxplot()+
+  facet_wrap(~Year, scales= 'free_y')+
+  scale_y_continuous(labels= scales::number_format(accuracy = 1))+
+  theme(axis.text.x= element_text(angle =45, hjust=1))
+```
+Regression of Julian date of the observed behavior (response) by year (predictor) for each behavior
+```{r}
+install.packages("broom")
+install.packages("purrr")
+library(broom)
+library (dplyr)
+ #Step 1: Group data by 'Behavior'
+# Step 2: Apply the regression for each behavior group
+updated_matrix$Julian <- as.numeric(updated_matrix$Julian)
+updated_matrix$Year <- as.numeric(updated_matrix$Year)
+remove_na_df <- updated_matrix %>% drop_na(Julian, Year)
+regression_results <- remove_na_df %>%
+  group_by(Behavior) %>%
+  group_split() %>%
+  map(~ lm(Julian ~ Year, data = .)) %>%
+  map_dfr(tidy)  # This extracts the coefficients and statistics
+
+# View the regression results
+print(regression_results)
+```
+```{r}
+library(ggplot2)
+ggplot(remove_na_df, aes(x = Year, y = Julian, color = factor(Behavior))) +
+  geom_point(alpha = 0.6) +  # Scatter plot for the data points
+  geom_smooth(method = "lm", se = FALSE, aes(group = Behavior), linetype = "solid") +  # Add regression lines
+  labs(title = "Regression of Julian Day by Year for Each Behavior",
+       x = "Year",
+       y = "Julian Day",
+       color = "Behavior") +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+```{r}
+behavior_freq <- updated_matrix %>%
+  group_by(Julian, Behavior) %>%
+  summarise(frequency = n()) %>%
+  ungroup()
+
+# Create the plot
+ggplot(behavior_freq, aes(x = Julian, y = frequency, color = as.factor(Behavior))) +
+  geom_line() +  # Line plot for frequencies
+  labs(title = "Behavior Frequency by Julian Day",
+       x = "Julian Day",
+       y = "Frequency",
+       color = "Behavior") +
+  theme_minimal() +
+  scale_color_discrete(name = "Behavior")
+```
+```{r}
+regal_behavior_freq <- regal_df %>%
+  group_by(Julian, Behavior) %>%
+  summarise(frequency = n()) %>%
+  ungroup()
+
+
+ggplot(regal_behavior_freq, aes(x = Julian, y = frequency, color = as.factor(Behavior), group = Behavior)) +
+  geom_line(size = .75, alpha = 0.8) +  # Thicker lines with slight transparency
+    # Add points for each behavior occurrence
+  labs(title = "Behavior Frequency by Julian Day",
+       x = "Julian Day",
+       y = "Frequency",
+       color = "Behavior") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Set1") +  # Use a distinct color palette for better visibility
+  theme(legend.position = "right") +      # Move the legend to the right for clarity
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
