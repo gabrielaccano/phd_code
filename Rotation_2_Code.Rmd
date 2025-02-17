@@ -12,12 +12,12 @@ library(dplyr)
 1. Sort data to only include regals that exhbit oviposition and mating behaviors (behaviors 6 and 8 respectively)
 ```{r}
 regal_df<- updated_matrix |> 
-  filter(butterfly_species== "REFR")
+  filter(butterfly_species== "ARID")
 
 
 all_repro_df <- updated_matrix |> filter(Behavior %in% c(6,8))
 
-regal_repro_df<- updated_matrix |> filter (butterfly_species =="REFR" & Behavior %in% c(6,8))
+regal_repro_df<- updated_matrix |> filter (butterfly_species =="ARID" & Behavior %in% c(6,8))
 
 regal_repr_relabel <- regal_repro_df %>%
   mutate(behavior_type = case_when(
@@ -72,6 +72,7 @@ ggplot(all_behavior_count, aes(x=Julian, y=behavior_count))+
   scale_y_continuous(labels= scales::number_format(accuracy = 1))+
   theme(axis.text.x= element_text(angle =45, hjust=1))
 ```
+
 Regression of Julian date of the observed behavior (response) by year (predictor) for each behavior
 ```{r}
 install.packages("broom")
@@ -105,6 +106,7 @@ ggplot(remove_na_df, aes(x = Year, y = Julian, color = factor(Behavior))) +
   theme(legend.position = "top")
 ```
 
+Lineplot of all butterfly behavior frequency over Julian day (no year)
 ```{r}
 behavior_freq <- updated_matrix %>%
   group_by(Julian, Behavior) %>%
@@ -121,9 +123,10 @@ ggplot(behavior_freq, aes(x = Julian, y = frequency, color = as.factor(Behavior)
   theme_minimal() +
   scale_color_discrete(name = "Behavior")
 ```
+Line plot of regal behavior frequency by Julian (year not factored)
 ```{r}
 regal_behavior_freq <- regal_df %>%
-  group_by(Julian, Behavior) %>%
+  group_by(Julian, Behavior, Year) %>%
   summarise(frequency = n()) %>%
   ungroup()
 
@@ -139,5 +142,63 @@ ggplot(regal_behavior_freq, aes(x = Julian, y = frequency, color = as.factor(Beh
   scale_color_brewer(palette = "Set1") +  # Use a distinct color palette for better visibility
   theme(legend.position = "right") +      # Move the legend to the right for clarity
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Whatever the hell 3D plot no one but Ian thought was a good idea
+```{r}
+library (plotly)
+
+regal_behavior_freq$Behavior<- as.character(regal_behavior_freq$Behavior)
+regal_behavior_freq$Year<- as.character(regal_behavior_freq$Year)
+# Create the plotly 3D scatter plot
+plot <- plot_ly(
+  data = regal_behavior_freq,
+  x = ~Julian,       # Julian Day on X axis
+  y = ~Behavior,         # Behavior on Y axis
+  z = ~frequency,
+  color= ~Year, # Frequency on Z axis
+  type = 'scatter3d',
+  mode = 'lines' 
+  # 3D scatter plot type
+      # Plot markers
+   # Customize marker size if needed
+)
+plot
+```
+Boxplot of all years by regal behaviors
+```{r}
+regal_df$Behavior<- as.character(regal_df$Behavior)
+cut_behaviors<-regal_df |> filter(!Behavior %in% c(7,NA))
+ggplot(cut_behaviors, aes(x=Julian, y=Behavior, fill = Behavior))+
+  geom_boxplot()+
+  facet_wrap(~Year, scales= 'free_y')+
+  theme(axis.text.x= element_text(angle =45, hjust=1))
+```
+Boxplot of all butterfly behaviors by year
+```{r}
+unique(updated_matrix$Behavior)
+
+updated_matrix$Year<- as.character(updated_matrix$Year)
+all_cut_behaviors<-updated_matrix |> filter(!Behavior %in% c(7,NA))
+ggplot(all_cut_behaviors, aes(x=Julian, y=Year, fill = Year))+
+  geom_boxplot()+
+  facet_wrap(~Behavior, scales= 'free_y')+
+  theme(axis.text.x= element_text(angle =45, hjust=1))
+```
+
+Boxplot of all regal behaviors by year
+```{r}
+regal_df$Year<- as.character(regal_df$Year)
+cut_behaviors<-regal_df |> filter(!Behavior %in% c(4,7,NA))
+ggplot(cut_behaviors, aes(x=Julian, y=Year, fill = Year))+
+  geom_boxplot()+
+  facet_wrap(~Behavior, scales= 'free_y')+
+  theme(axis.text.x= element_text(angle =45, hjust=1))
+```
+
+Distribution of flowers the regals are using
+```{r}
+regal_df |> filter
+
 ```
 
