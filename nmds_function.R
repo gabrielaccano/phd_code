@@ -39,8 +39,9 @@ plant_colors<-c(
   "SOLID" = "#E69F00"
 )
 
-setwd("C:/Users/GCano/Documents/GitHub/phd_code/")
-matrix_98_24<- read_xlsx("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/complete pollard data CRT 7May2025.xlsx")
+
+setwd("C:/Users/tut43799/OneDrive - Temple University/Documents/GitHub/phd_code")
+matrix_98_24<- read_xlsx("butterfly_data_16_24/complete pollard data CRT 7May2025.xlsx")
 
 run_nmds_plot <- function(species_name) {
   
@@ -51,7 +52,8 @@ run_nmds_plot <- function(species_name) {
   prep <- matrix_98_24 |> 
     filter(butterfly_species_cleaned == species_name) |> 
     filter(behavior == 3) |> 
-    filter(!is.na(nectar_species_cleaned), field != "Boyer")
+    filter(!is.na(nectar_species_cleaned), field != "Boyer") |> 
+    filter(nectar_species_cleaned!= "NA", field != "Middle Creek")
   
   dist_matrix <- prep |> 
     count(year, month, field, nectar_species_cleaned) |> 
@@ -96,10 +98,16 @@ run_nmds_plot <- function(species_name) {
   okabe_ito_extended <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", 
                           "#0072B2", "#D55E00", "#CC79A7", "#999999")
   
+  #plant scores
+  plant_scores<-scores(dapl_nmds, display= "species")
+  plant_df<-as.data.frame(dapl_plant_scores)
+  plant_df$nectar_species_cleaned<-rownames(dapl_plant_df)
+  
   # Plot
   p <- ggplot() +
     geom_point(data = matrix_scores, aes(x = MDS1, y = MDS2, color = as.factor(month), shape = as.factor(month)),
                size = 3) +
+    geom_label(data= plant_df, aes(x= NMDS1, y=NMDS2, label= nectar_species_cleaned))+
     geom_polygon(data = hull_data_month, 
                  aes(x = MDS1, y = MDS2, group = month, fill = as.factor(month)), 
                  alpha = 0.1, color = "black") +
@@ -116,6 +124,8 @@ run_nmds_plot <- function(species_name) {
   assign(paste0(prefix, "_nmds"), nmds, envir = .GlobalEnv)
   assign(paste0(prefix, "_matrix_scores"), matrix_scores, envir = .GlobalEnv)
   assign(paste0(prefix, "_hull_data_month"), hull_data_month, envir = .GlobalEnv)
+  assign(paste0(prefix, "_plant_scores"), plant_scores, envir = .GlobalEnv)
+  assign(paste0(prefix, "_plant_df"), plant_df, envir = .GlobalEnv)
   
   return(p)
 }
@@ -129,7 +139,7 @@ dapl_numeric_filtered$combo_id <- rownames(dapl_numeric_filtered)
 dapl_parts <- do.call(rbind, strsplit(dapl_numeric_filtered$combo_id, "_"))
 colnames(dapl_parts) <- c("year", "month", "field")
 dapl_primer<- cbind(dapl_parts, dapl_numeric_filtered)
-write_xlsx(dapl_primer, "C:/Users/GCano/OneDrive - Temple University/dapl_primermatrix.xlsx")
+write_xlsx(dapl_primer, "C:/Users/tut43799/OneDrive - Temple University/Documents/GitHub/phd_code/dapl_primer.xlsx")
 
 run_nmds_plot("ARID")
 
@@ -140,6 +150,12 @@ run_nmds_plot("ARCA")
 run_nmds_plot("EPCL")
 
 run_nmds_plot("PAGL")
+
+run_nmds_plot("PATR")
+
+patr_parts <- do.call(rbind, strsplit(patr_numeric_filtered$combo_id, "_"))
+patr_primer<- cbind(patr_parts, patr_numeric_filtered)
+write_xlsx(patr_primer, "C:/Users/tut43799/OneDrive - Temple University/Documents/GitHub/phd_code/patr_primer.xlsx")
 
 regal_remove_na<- matrix_98_24 |> 
   filter(butterfly_species_cleaned=="ARID") |> 
@@ -169,7 +185,7 @@ dapl_plant_df$nectar_species_cleaned<-rownames(dapl_plant_df)
 ggplot() +
   geom_point(data = dapl_matrix_scores, aes(x = MDS1, y = MDS2, color = as.factor(month), shape = as.factor(month)),
              size = 3) +
-  #geom_label(data= dapl_plant_df, aes(x= NMDS1, y=NMDS2, label= nectar_species_cleaned))+
+  geom_label(data= dapl_plant_df, aes(x= NMDS1, y=NMDS2, label= nectar_species_cleaned))+
   geom_polygon(data = dapl_hull_data_month, 
                aes(x = MDS1, y = MDS2, group = month, fill = as.factor(month)), 
                alpha = 0.1, color = "black") +
@@ -199,7 +215,7 @@ ggplot(dapl_remove_na, aes(x=as.factor(week), fill=nectar_species_cleaned))+
                               "DACA6"= "Daucus carota",
                               "EUPAT"= "Eupatorium spp.",
                               "EUPE3"= "Eupatorium perfoliatum",
-                              "EUTRO"= "Euthrochium spp.",
+                              "EUTRO"= "Eutrochium spp.",
                               "LEVU"= "Leucanthemum vulgare",
                               "PYCNA"= "Pycanthemum spp.",
                               "ROMU"= "Rosa multiflora",
@@ -318,3 +334,25 @@ labs(#title= "Nectar plant usage over time by male and female Eastern Regal Frit
   theme(legend.text = element_text(face = "italic"),
         axis.text.x = element_text(color = "black"),
         axis.text.y = element_text(color = "black"))
+
+
+
+
+arca_plant_scores<-scores(arca_nmds, display= "species")
+arca_plant_df<-as.data.frame(arca_plant_scores)
+arca_plant_df$nectar_species_cleaned<-rownames(arca_plant_df)
+
+ggplot() +
+  geom_point(data = arca_matrix_scores, aes(x = MDS1, y = MDS2, color = as.factor(month), shape = as.factor(month)),
+             size = 3) +
+  geom_label(data= arca_plant_df, aes(x= NMDS1, y=NMDS2, label= nectar_species_cleaned))+
+  geom_polygon(data = arca_hull_data_month, 
+               aes(x = MDS1, y = MDS2, group = month, fill = as.factor(month)), 
+               alpha = 0.1, color = "black") +
+  scale_fill_manual(values = okabe_ito_extended) +
+  scale_color_manual(values = okabe_ito_extended) +
+  stat_ellipse(data = arca_matrix_scores, aes(x = MDS1, y = MDS2, color = month), level = 0.95) +
+  theme_minimal()+
+  labs(title= "NMDS of nectar plant use by GSA", color= "Month", shape= "Month", fill= "Month")
+
+
