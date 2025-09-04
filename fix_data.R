@@ -424,26 +424,30 @@ view(matrix_98_24_cleaned |>
        filter(comments!= "NA") |> 
        distinct(comments))
 
-matrix_98_24_thistle<- matrix_98_24 |> 
-  mutate(butterfly_species_cleaned= ifelse(year>= 1998 & year<=2004, "ARID", butterfly_species_cleaned)) |> 
+matrix_98_24_thistle <- matrix_98_24_cleaned |> 
+  mutate(butterfly_species_cleaned = ifelse(year >= 1998 & year <= 2004, "ARID", butterfly_species_cleaned)) |> 
   mutate(nectar_species_cleaned = case_when(
-    year >= 1998 & year <= 2003 & julian> 220 & nectar_species_cleaned == "CIPU4" ~ "CIDI",
-    TRUE ~ nectar_species_cleaned))|> 
+    year >= 1998 & year <= 2003 & julian > 220 & nectar_species_cleaned == "CIPU4" ~ "CIDI",
+    year == 2013 & julian < 160 & nectar_species_cleaned == "CIDI" ~ "CIPU4",   # new rule
+    TRUE ~ nectar_species_cleaned
+  )) |> 
   mutate(comments = case_when(
     year >= 1998 & year <= 2003 & julian > 220 & nectar_species_cleaned == "CIDI" ~ 
       "Changed from CIPU4 to CIDI on 03/07/25 by GCC with approval from FIG",
-    TRUE ~ ifelse(is.na(comments), "", comments)  # Ensure comment is not NA
+    year == 2013 & julian < 160 & nectar_species_cleaned == "CIPU4" ~ 
+      "Changed from CIDI to CIPU4 on 09/02/25 by GCC",   # new comment
+    TRUE ~ ifelse(is.na(comments), "", comments)  # keep existing comments non-NA
   ))
 
 str(matrix_98_24_thistle)
 
 matrix_98_24_remove<- matrix_98_24 |> 
-  select(-nectar_species, -butterfly_species) |> 
-  select(year, month, date, week, julian, observer, site, start, end, duration,s_percent_sun, e_percent_sun, s_wind, e_wind, s_temp,
-         e_temp, total, individual, section, sex, behavior, nectar_species_cleaned, butterfly_species_cleaned, comments)
+  #select(-nectar_species, -butterfly_species) |> 
+  select(year, month, date, week, julian, observer, segment_orig, segment, site_orig, field, route, start, end, duration,s_percent_sun, e_percent_sun, s_wind, e_wind, s_temp,
+         e_temp, total, individual, sex, behavior, butterfly_species, nectar_species, nectar_species_cleaned, butterfly_species_cleaned, comments)
 
 
-write.xlsx(matrix_98_24_thistle,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_full_matrix_04_29_25.xlsx", 
+write.xlsx(matrix_98_24_thistle,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_complete_pollard_09_02_25.xlsx", 
            rowNames = FALSE)
 
 new_matrix<-read_xlsx("butterfly_data_16_24/gcc_complete_pollard_04_29_25.xlsx", sheet= "matrix_98_24",

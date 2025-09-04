@@ -185,18 +185,21 @@ dapl_plant_df$nectar_species_cleaned<-rownames(dapl_plant_df)
 ggplot() +
   geom_point(data = dapl_matrix_scores, aes(x = MDS1, y = MDS2, color = as.factor(month), shape = as.factor(month)),
              size = 3) +
-  geom_label(data= dapl_plant_df, aes(x= NMDS1, y=NMDS2, label= nectar_species_cleaned))+
+  #geom_label(data= dapl_plant_df, aes(x= NMDS1, y=NMDS2, label= nectar_species_cleaned))+
   geom_polygon(data = dapl_hull_data_month, 
                aes(x = MDS1, y = MDS2, group = month, fill = as.factor(month)), 
                alpha = 0.1, color = "black") +
   scale_fill_manual(values = okabe_ito_extended) +
-  scale_color_manual(values = okabe_ito_extended) +
-  stat_ellipse(data = dapl_matrix_scores, aes(x = MDS1, y = MDS2, color = month), level = 0.95) +
-  labs(title = "NMDS of nectar use for Monarch") +
+  scale_color_manual(values = c("7"="#56B4E9",
+                                "8"= "#009E73", 
+                                "9"="#F0E442",
+                                "10"="#D55E00")) +
+  stat_ellipse(data = dapl_matrix_scores, aes(x = MDS1, y = MDS2, color = month), level = 0.5) +
+  labs(title = "NMDS of nectar use by Monarch") +
   theme_minimal()+
   labs(color= "Month", shape= "Month", fill= "Month")
 
-ggplot(dapl_remove_na, aes(x=as.factor(week), fill=nectar_species_cleaned))+
+dapl_prop<-ggplot(dapl_remove_na, aes(x=as.factor(week), fill=nectar_species_cleaned))+
   geom_bar(position= "fill")+
   labs(title= "Proportion of nectar use by week of Monarchs")+ 
   scale_fill_manual(values=plant_colors,
@@ -225,6 +228,13 @@ ggplot(dapl_remove_na, aes(x=as.factor(week), fill=nectar_species_cleaned))+
   theme(legend.text = element_text(face = "italic"),
         axis.text.x = element_text(color = "black"),
         axis.text.y = element_text(color = "black"))
+
+ggsave("dapl_prop.png",
+       plot = dapl_prop,
+       width = 13.22,
+       height = 8.7,
+       units = "in",
+       dpi = 300)
 
 regal_plant_scores<-scores(arid_nmds, display= "species")
 regal_plant_df<-as.data.frame(regal_plant_scores)
