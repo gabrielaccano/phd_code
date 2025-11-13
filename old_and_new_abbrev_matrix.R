@@ -35,14 +35,16 @@ updated_matrix$butterfly_species_cleaned <- sapply(updated_matrix$butterfly_spec
 
 updated_matrix<- updated_matrix |> 
   mutate(butterfly_species_cleaned = if_else(
-    is.na(butterfly_species_cleaned) & Year >= 1998 & Year <= 2004,
+    is.na(butterfly_species_cleaned) & Year >= 1998 & Year <= 2004 & Individual!=0,
     "ARID",
     butterfly_species_cleaned))
 
-write.csv(updated_matrix,"C:/Users/GCano/Documents/GitHub/phd_code/pre_thistle_matrix_gcc_04_29_25.csv", row.names = FALSE)
+view(updated_matrix |>filter(Individual==0| is.na(Individual)))
+
+write.csv(updated_matrix,"C:/Users/GCano/Documents/GitHub/phd_code/pre_thistle_matrix_gcc_10_25_25.csv", row.names = FALSE)
 
 mutated_matrix<- updated_matrix |> 
-  mutate(butterfly_species= ifelse(Year>= 1998 & Year<=2004, "ARID", butterfly_species)) |> 
+  #mutate(butterfly_species= ifelse(Year>= 1998 & Year<=2004, "ARID", butterfly_species)) |> 
   mutate(nectar_species = case_when(
     Year >= 1998 & Year <= 2003 & Julian> 220 & nectar_species == "CIPU4" ~ "CIDI",
     TRUE ~ nectar_species))|> 
@@ -56,5 +58,33 @@ mutated_matrix<- updated_matrix |>
 week_matrix<- mutated_matrix |> 
   mutate (Week=ceiling((Julian)/7))
 
-write.xlsx(week_matrix,"C:/Users/GCano/Documents/GitHub/phd_code/updated_matrix_gcc_04_29_25.xlsx", row.names = FALSE)
+view(week_matrix |>  filter(Total==0))
 
+write.xlsx(week_matrix,"C:/Users/GCano/Documents/GitHub/phd_code/updated_matrix_gcc_10_25_25.xlsx", row.names = FALSE)
+
+
+
+
+list_recent_r_files <- function(base_dir, since = "2025-02-01") {
+  # Include .R, .Rmd, .qmd, and .Rnw files
+  files <- list.files(
+    base_dir,
+    pattern = "\\.(R|Rmd|qmd|Rnw)$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  
+  # Get file metadata
+  info <- file.info(files)
+  
+  # Filter to files modified since the given date
+  recent <- subset(info, mtime >= as.POSIXct(since))
+  
+  # Sort newest first
+  recent <- recent[order(recent$mtime, decreasing = TRUE), ]
+  
+  return(rownames(recent))
+}
+
+# Example usage:
+list_recent_r_files("C:/Users/GCano/Documents/Github")

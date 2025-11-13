@@ -10,8 +10,8 @@ library(fuzzyjoin)
 setwd("C:/Users/GCano/Documents/GitHub/phd_code")
 
 #Remove columns from 98-15-------------
-str(matrix_98_15)
-matrix_98_15 <- read_xlsx("updated_matrix_gcc_04_29_25.xlsx", 
+#str(matrix_98_15)
+matrix_98_15 <- read_xlsx("updated_matrix_gcc_10_25_25.xlsx", 
                           col_types= c("numeric",
                                        "numeric",
                                        "date",
@@ -107,7 +107,9 @@ matrix_22_update<- matrix_22 |>
          e_temp, total, individual, section, sex, behavior, nectar_species, butterfly_species, comments)
 
 #Fix 21 to match 98-15--------------
-matrix_21<- read_excel("butterfly_data_16_24/butterfly_21.xlsx")
+matrix_21<- read_csv("butterfly_data_16_24/butterfly_21.csv")
+
+view(matrix_21 |> filter(species== "REGAL"))
 
 janitor::clean_names(matrix_21)
 
@@ -121,6 +123,8 @@ matrix_21_update<- matrix_21 |>
    select(year, month, date, week, julian, observer, site, start, end, duration,s_percent_sun, e_percent_sun, s_wind, e_wind, s_temp,
           e_temp, total, individual, section, sex, behavior, nectar_species, butterfly_species) |> 
   add_column(comments= NA)
+
+view(matrix_21_update |>  filter(butterfly_species== "REGAL"))
 
 #Fix 20 to match 98-2015 -----------------
 matrix_20<- read_excel("butterfly_data_16_24/butterfly_20.xlsx",
@@ -208,6 +212,8 @@ matrix_18_update<- matrix_18 |>
 #Fix 17 to match 98-15-----------------
 matrix_17<- read_excel("butterfly_data_16_24/butterfly_17.xlsx")
 
+view(matrix_17)
+
 janitor::clean_names(matrix_17)
 
 matrix_17_update<- matrix_17 |> 
@@ -252,6 +258,8 @@ merged_matrix_16_24<- rbind(matrix_16_update,
                       matrix_23_update,
                       matrix_24_update)
 
+view(merged_matrix_16_24 |> filter(year== 2021, butterfly_species== "REGAL"))
+
 #Fixing minor dataset-wide problems
 merged_matrix_16_24_clean <- merged_matrix_16_24 |>
   mutate(year= as.numeric(year)) |> 
@@ -260,7 +268,8 @@ merged_matrix_16_24_clean <- merged_matrix_16_24 |>
     year == 1900~ 2019,
     TRUE ~ year)) |> 
   filter(!if_all(everything(), is.na)) |> 
-  filter(!(is.na(nectar_species) & is.na(butterfly_species))) |> 
+  ##LOOK TO SEE IF THIS IS GETTING RID OF NONES
+  #filter(!(is.na(nectar_species) & is.na(butterfly_species))) |> 
   mutate(start = format(start, "%H:%M"),
          end = format(end, "%H:%M"),
         duration = format(duration, "%H:%M"),
@@ -270,10 +279,12 @@ merged_matrix_16_24_clean <- merged_matrix_16_24 |>
          butterfly_species_cleaned= butterfly_species)
 
 #Export as compiled 
-write.xlsx(merged_matrix_16_24_clean,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/combined_16_24_04_28_25.xlsx", 
+write.xlsx(merged_matrix_16_24_clean,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/combined_16_24_10_25_25.xlsx", 
            rowNames = FALSE)
 
-to_combine<- read_xlsx("butterfly_data_16_24/combined_16_24_04_28_25.xlsx",
+to_combine<-merged_matrix_16_24_clean
+
+to_combine<- read_xlsx("butterfly_data_16_24/combined_16_24_10_25_25.xlsx",
                        col_types= c("numeric",
                        "numeric",
                        "date",
@@ -316,30 +327,34 @@ view(diff_plant |>
 plant_code_map <- setNames(updated_p$plant_code, updated_p$nectar_species)
 
 # Replace nectar_species in original_matrix with corresponding plant_code
-to_combine$nectar_species_cleaned <- sapply(to_combine$nectar_species_cleaned,
+merged_matrix_16_24_clean$nectar_species_cleaned <- sapply(merged_matrix_16_24_clean$nectar_species_cleaned,
                                         function(x) plant_code_map[x])
 
 # Create a named vector for plant_name -> plant_code mapping
 butterfly_code_map <- setNames(updated_b$butterfly_code, updated_b$butterfly_species)
 
 # Replace nectar_species in original_matrix with corresponding plant_code
-to_combine$butterfly_species_cleaned <- sapply(to_combine$butterfly_species_cleaned,
+merged_matrix_16_24_clean$butterfly_species_cleaned <- sapply(merged_matrix_16_24_clean$butterfly_species_cleaned,
                                            function(x) butterfly_code_map[x])
 
 #Fix sex
 colnames(to_combine)
 
+view(merged_matrix_16_24_clean)
 
 view(to_combine |> distinct(sex))
 
-to_combine_sex<- to_combine |> 
+to_combine_sex<- merged_matrix_16_24_clean |> 
   mutate( sex = case_when(
     sex == "FEMALE"~ "F",
     sex == "MALE" ~ "M",
+    sex == "Male" ~ "M",
+    sex== "UNK" ~ NA_character_,
+    sex== "UNKNOWN" ~ NA_character_,
     TRUE ~ sex))
 
 rg<-to_combine_sex |> 
-  filter(butterfly_species=="ARID")
+  filter(butterfly_species_cleaned=="ARID")
 
 
 view(rg)
@@ -348,6 +363,11 @@ view(rg)
 matrix_98_24<- rbind(matrix_98_15_standard,
                      to_combine_sex)
 
+view(matrix_98_24 |> filter ((is.na(nectar_species) & is.na(butterfly_species) & year>=2005)))
+
+
+write.xlsx(matrix_98_24,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_complete_pollard_10_25_25.xlsx", 
+           rowNames = FALSE)
 
 matrix_98_24<- read_xlsx("butterfly_data_16_24/gcc_full_matrix_04_29_25.xlsx",
                          col_types=c ("numeric",
@@ -441,16 +461,18 @@ matrix_98_24_thistle <- matrix_98_24_cleaned |>
 
 str(matrix_98_24_thistle)
 
+view(matrix_98_24_thistle |>  filter(!is.na(comments) & comments != ""))
+
 matrix_98_24_remove<- matrix_98_24 |> 
   #select(-nectar_species, -butterfly_species) |> 
   select(year, month, date, week, julian, observer, segment_orig, segment, site_orig, field, route, start, end, duration,s_percent_sun, e_percent_sun, s_wind, e_wind, s_temp,
          e_temp, total, individual, sex, behavior, butterfly_species, nectar_species, nectar_species_cleaned, butterfly_species_cleaned, comments)
 
 
-write.xlsx(matrix_98_24_thistle,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_complete_pollard_09_02_25.xlsx", 
+write.xlsx(matrix_98_24_thistle,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_complete_pollard_10_25_25.xlsx", 
            rowNames = FALSE)
 
-new_matrix<-read_xlsx("butterfly_data_16_24/gcc_complete_pollard_04_29_25.xlsx", sheet= "matrix_98_24",
+new_matrix<-read_xlsx("butterfly_data_16_24/gcc_complete_pollard_10_09_25.xlsx",
                       col_types = c("numeric",
                       "numeric",
                       "date",
@@ -476,7 +498,7 @@ new_matrix<-read_xlsx("butterfly_data_16_24/gcc_complete_pollard_04_29_25.xlsx",
                       "text",
                       "text"))
 
-fix_bob<- new_matrix|> 
+fix_bob<- matrix_98_24_thistle|> 
   mutate(
     butterfly_species_cleaned = case_when(
       str_detect(comments, "butterfly species = (RBHS|RBSH\\?|RBH)") ~ "CACE",
@@ -491,9 +513,9 @@ fix_bob<- new_matrix|>
   )
 
 view(fix_bob |> 
-       filter(butterfly_species_cleaned== "CACE"))
+       filter(butterfly_species== "BOB"))
 
-write.xlsx(fix_bob,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_complete_pollard_04_30_25.xlsx", 
+write.xlsx(fix_bob,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_complete_pollard_10_25_25.xlsx", 
            rowNames = FALSE)
 
 view(matrix_98_24 |> 
@@ -511,3 +533,17 @@ new_rg<- matrix_98_24 |>
 view(new_rg)
 
 
+find_r_files_by_date <- function(base_dir, date = "2025-02-06") {
+  files <- list.files(base_dir, pattern = "\\.R$", recursive = TRUE, full.names = TRUE)
+  info <- file.info(files)
+  
+  # Define a small date window (±1 day)
+  start_date <- as.POSIXct(paste0(date, " 00:00:00"))
+  end_date <- as.POSIXct(paste0(date, " 23:59:59"))
+  
+  recent <- subset(info, mtime >= start_date & mtime <= end_date)
+  recent[order(recent$mtime, decreasing = TRUE), , drop = FALSE]
+}
+
+# Example:
+find_r_files_by_date("C:/Users/GCano")
