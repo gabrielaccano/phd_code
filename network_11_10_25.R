@@ -6,9 +6,11 @@
 library(tidyverse)
 library(readxl)
 library(bipartite)
+library(ggpubr)
+
 
 #read in data set
-matrix<- read_excel("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_complete_pollard_10_25_25.xlsx")
+matrix<- read_excel("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_25/complete pollard data CRT_October2025.xlsx")
 
 #Combine the problem data, combine these names to what Clayton and I agreed to (excel sheet describing combinations)
 fix_matrix <- matrix |> 
@@ -59,8 +61,17 @@ net_butt <- table(use_butt$butterfly_species_cleaned, use_butt$nectar_species_cl
 net_df<- as.data.frame.matrix(net_butt)
 
 #visualize the network
-plotweb(net_df) #web
-visweb(net_df) #heatmap
+plotweb(net_df,
+        scaling = "relative",
+        higher_color = "pink",
+        lower_color = "lightblue",
+        text_size = .5,
+        sorting = "decr")#web
+
+visweb(net_df,
+       labsize= 2) #heatmap
+
+?plotweb
 
 #network-level indices
 net_indices<- networklevel(net_df, index=c("connectance", "nestedness", "H2"))
@@ -76,3 +87,135 @@ print(net_indices)
 #species-level indices
 sp_indices<- specieslevel(net_butt, level= "both")
 print(sp_indices)
+
+
+#do the network indices change over years?
+
+years <- 2007:2024
+
+results <- lapply(years, function(y) {
+  
+  # Filter for this year
+  use_butt <- g_sp_matrix |>
+    filter(butterfly_species_cleaned %in% highlight_butt$butterfly_species_cleaned) |>
+    filter(year == y)
+  
+  # Create bipartite matrix
+  net_butt <- table(use_butt$butterfly_species_cleaned,
+                    use_butt$nectar_species_cleaned)
+  
+  net_df <- as.data.frame.matrix(net_butt)
+  
+  # Compute network indices
+  ind <- networklevel(net_df, index = c("connectance", "nestedness", "H2"))
+  
+  # Return a row as a data frame
+  data.frame(
+    year = y,
+    connectance = ind["connectance"],
+    nestedness = ind["nestedness"],
+    H2 = ind["H2"]
+  )
+})
+
+# Combine into a single dataframe
+network_indices_by_year <- do.call(rbind, results)
+
+connect<- ggplot(network_indices_by_year, aes(y=connectance, x=year))+
+  geom_point()+
+  geom_smooth()
+
+nest<- ggplot(network_indices_by_year, aes(y=nestedness, x=year))+
+  geom_point()+
+  geom_smooth()
+
+h2<- ggplot(network_indices_by_year, aes(y=H2, x=year))+
+  geom_point()+
+  geom_smooth()
+
+
+ggarrange(connect, nest, h2)
+
+#what happens if i throw climate into this mix
+
+monthly_climate <- summer_climate |>
+  mutate(year = year(date),
+         month = month(date)) |>
+  group_by(year, month) |>
+  summarise(
+    max_temp = max(tmax, na.rm = TRUE),
+    mean_precip= mean(prcp, na.rm= TRUE),
+    .groups = "drop"
+  )
+
+#function making connectance, nestedness, and h2 values for each month/year 
+#combination
+results <- lapply(seq_len(nrow(monthly_climate)), function(i) {
+  
+  y <- monthly_climate$year[i]
+  m <- monthly_climate$month[i]
+  max_t <- monthly_climate$max_temp[i] #max temp variable for each year/month combo
+  precip<- monthly_climate$mean_precip [i]
+  
+  # Filter butterfly data for this year + month
+  use_butt <- g_sp_matrix |>
+    filter(
+      butterfly_species_cleaned %in% highlight_butt$butterfly_species_cleaned,
+      year == y,
+      month == m
+    )
+  
+  # Skip months with no data
+  if (nrow(use_butt) == 0) return(NULL)
+  
+  # Create bipartite matrix
+  net_butt <- table(
+    use_butt$butterfly_species_cleaned,
+    use_butt$nectar_species_cleaned
+  )
+  
+  net_df <- as.data.frame.matrix(net_butt)
+  
+  # Compute network indices
+  ind <- networklevel(
+    net_df,
+    index = c("connectance", "nestedness", "H2")
+  )
+  
+  # Return results
+  data.frame(
+    year = y,
+    month = m,
+    max_temp = max_t,
+    precip= precip,
+    connectance = ind["connectance"],
+    nestedness = ind["nestedness"],
+    H2 = ind["H2"]
+  )
+})
+
+network_by_climate <- do.call(rbind, results)
+
+ggplot(network_by_climate, aes(x=max_temp, y= connectance))+
+  geom_point()+
+  geom_smooth(method=lm)
+
+ggplot(network_by_climate, aes(x=max_temp, y= nestedness))+
+  geom_point()+
+  geom_smooth(method=lm)
+
+ggplot(network_by_climate, aes(x=max_temp, y= H2))+
+  geom_point()+
+  geom_smooth(method=lm)
+
+ggplot(network_by_climate, aes(x=precip, y= connectance))+
+  geom_point()+
+  geom_smooth(method=lm)
+
+ggplot(network_by_climate, aes(x=precip, y= nestedness))+
+  geom_point()+
+  geom_smooth(method=lm)
+
+ggplot(network_by_climate, aes(x=precip, y= H2))+
+  geom_point()+
+  geom_smooth(method=lm)

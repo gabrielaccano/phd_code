@@ -41,7 +41,10 @@ plant_colors<-c(
 
 
 setwd("C:/Users/tut43799/OneDrive - Temple University/Documents/GitHub/phd_code")
-matrix_98_24<- read_xlsx("butterfly_data_16_24/complete pollard data CRT 7May2025.xlsx")
+matrix_98_24<- read_xlsx("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/complete pollard data CRT_October2025.xlsx")
+
+matrix_98_24<- matrix_98_24 |> 
+  mutate(month = as.integer(month))
 
 run_nmds_plot <- function(species_name) {
   
@@ -99,9 +102,9 @@ run_nmds_plot <- function(species_name) {
                           "#0072B2", "#D55E00", "#CC79A7", "#999999")
   
   #plant scores
-  plant_scores<-scores(dapl_nmds, display= "species")
-  plant_df<-as.data.frame(dapl_plant_scores)
-  plant_df$nectar_species_cleaned<-rownames(dapl_plant_df)
+  plant_scores <- scores(nmds, display = "species")
+  plant_df <- as.data.frame(plant_scores)
+  plant_df$nectar_species_cleaned <- rownames(plant_df)
   
   # Plot
   p <- ggplot() +
