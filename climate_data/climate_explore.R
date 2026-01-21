@@ -30,11 +30,11 @@ grouped_climate<- summer_climate |>
     .groups = "drop"
   )
 
-ggplot(grouped_climate, aes(x=year, y=max_temp))+
+ggplot(grouped_climate, aes(x=year, y=max_temp, color=as.factor(month)))+
   geom_point()+
-  geom_smooth()
+  geom_smooth(method="lm", se= FALSE)
 
-#each month individually
+#each month individually, min temp----------
 may<-grouped_climate |> 
   filter(month==5)
 
@@ -47,25 +47,39 @@ july<-grouped_climate |>
 august<-grouped_climate |> 
   filter(month==8)
 
+september<- grouped_climate |> 
+  filter(month==9)
+
 may_min<- ggplot(may, aes(x=year, y=min_temp))+
   geom_point()+
-  geom_smooth(method=lm)
+  geom_smooth(method=lm)+
+  labs(title= "May")
 
 june_min<- ggplot(june, aes(x=year, y=min_temp))+
   geom_point()+
-  geom_smooth(method=lm)
+  geom_smooth(method=lm)+
+  labs(title= "June")
 
 july_min<- ggplot(july, aes(x=year, y=min_temp))+
   geom_point()+
-  geom_smooth(method=lm)
+  geom_smooth(method=lm)+
+  labs(title= "July")
 
 august_min<- ggplot(august, aes(x=year, y=min_temp))+
   geom_point()+
-  geom_smooth(method=lm)
+  geom_smooth(method=lm)+
+  labs(title= "August")
 
-ggarrange(may_min, june_min, july_min, august_min)
+sep_min<- ggplot(september, aes(x=year, y=min_temp))+
+  geom_point()+
+  geom_smooth(method=lm)+
+  labs(title= "September")
 
-#precipitation
+ggarrange(may_min, june_min, july_min, august_min, sep_min)
+
+
+
+#precipitation--------------------
 
 precip_climate<- climate |> 
   mutate(
@@ -78,6 +92,7 @@ precip_climate<- climate |>
     min_precip  = min(prcp, na.rm = TRUE),
     max_precip  = max(prcp, na.rm = TRUE),
     mean_precip = mean(prcp, na.rm = TRUE),
+    total_precip= sum(prcp, na.rm= TRUE),
     .groups = "drop"
   )
 
@@ -89,6 +104,6 @@ ggplot(summer_precip, aes(x = year, y = factor(month), fill = mean_precip)) +
   scale_fill_viridis_c() +
   theme_minimal()
 
-ggplot(summer_precip, aes(x= year, y=mean_precip, color=as.factor(month)))+
+ggplot(summer_precip, aes(x= year, y=total_precip, color=as.factor(month)))+
   geom_point()+
   geom_smooth(method= lm, se= FALSE)

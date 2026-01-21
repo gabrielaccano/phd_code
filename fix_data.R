@@ -6,6 +6,7 @@ library(gdata)
 library(openxlsx)
 library(janitor)
 library(fuzzyjoin)
+library(lubridate)
 
 setwd("C:/Users/GCano/Documents/GitHub/phd_code")
 
@@ -240,12 +241,52 @@ month = month(date, label = FALSE)) |>
   select(year, month, date, week, julian, observer, site, start, end, duration,s_percent_sun, e_percent_sun, s_wind, e_wind, s_temp,
          e_temp, total, individual, section, sex, behavior, nectar_species, butterfly_species, comments)
 
+#Fix 25 to match 98-15---------------------------
+matrix_25<- read.csv(
+  "butterfly_data_16_25/butterfly_25.csv") 
+
+janitor::clean_names(matrix_25)
+
+matrix_25_update<- matrix_25 |> 
+  clean_names() |> 
+  mutate(date=as.Date(date, format= "%m/%d/%Y"),
+         year= format(as.Date(date, format="%m%d%Y"),"%Y"),
+         month= format(as.Date(date, format= "%#m%d%Y"), "%m"),
+         month = as.numeric(month),
+         duration= (e_time-s_time),
+         week=isoweek(date))|>
+  rename(sex= gender, start=s_time, end= e_time, nectar_species= nectar, butterfly_species= species, julian= j_date, s_percent_sun=s_sun,
+         e_percent_sun=e_sun) |> 
+  mutate(sex = case_when(
+    sex == "FEMALE"~ "F",
+    sex == "MALE" ~ "M"))|> 
+  select(year, month, date, week, julian, observer, site, start, end, duration,s_percent_sun, e_percent_sun, s_wind, e_wind, s_temp,
+         e_temp, total, individual, section, sex, behavior, nectar_species, butterfly_species, comments) |> 
+  mutate(nectar_species_cleaned= nectar_species,
+         butterfly_species_cleaned= butterfly_species)
+
+#Fix naming for this one only
+
+# Create a named vector for plant_name -> plant_code mapping
+plant_code_map <- setNames(updated_p$plant_code, updated_p$nectar_species)
+
+# Replace nectar_species in original_matrix with corresponding plant_code
+matrix_25_update$nectar_species_cleaned <- sapply(matrix_25_update$nectar_species_cleaned,
+                                                           function(x) plant_code_map[x])
+
+# Create a named vector for plant_name -> plant_code mapping
+butterfly_code_map <- setNames(updated_b$butterfly_code, updated_b$butterfly_species)
+
+# Replace nectar_species in original_matrix with corresponding plant_code
+matrix_25_update$butterfly_species_cleaned <- sapply(matrix_25_update$butterfly_species_cleaned,
+                                                              function(x) butterfly_code_map[x])
+
 #merge all new dfs into one to fix naming ---------------
 
 #Import -15 data and plant/butterfly code
 original_matrix<- read_excel("updated_matrix_gcc_03_11_25.xlsx", sheet = "mutated_matrix")
-updated_b<- read_excel("updated_matrix_gcc_03_11_25.xlsx", sheet= "butterfly_codes")
-updated_p<- read_excel("updated_matrix_gcc_03_11_25.xlsx", sheet= "plant_codes")
+updated_b<- read_excel("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_25/gcc_complete_pollard_10_25_25.xlsx", sheet= "butterfly_codes")
+updated_p<- read_excel("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_25/gcc_complete_pollard_10_25_25.xlsx", sheet= "plant_codes")
 
 #Combined matrix
 merged_matrix_16_24<- rbind(matrix_16_update, 
@@ -517,6 +558,14 @@ view(fix_bob |>
 
 write.xlsx(fix_bob,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_24/gcc_complete_pollard_10_25_25.xlsx", 
            rowNames = FALSE)
+#Merging 2025 to the rest-----------------------------
+matrix_98_24_gcc<-read_excel("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_25/gcc_complete_pollard_10_25_25.xlsx")
+
+matrix_98_25<-rbind(matrix_98_24_gcc, matrix_25_update) |> 
+  mutate(month=as.numeric(month))
+
+write.xlsx(matrix_98_25,"C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_25/gcc_complete_pollard_12_30_25.xlsx", 
+           rowNames = FALSE)
 
 view(matrix_98_24 |> 
        filter(butterfly_species=="ARID",
@@ -532,18 +581,3 @@ new_rg<- matrix_98_24 |>
 
 view(new_rg)
 
-
-find_r_files_by_date <- function(base_dir, date = "2025-02-06") {
-  files <- list.files(base_dir, pattern = "\\.R$", recursive = TRUE, full.names = TRUE)
-  info <- file.info(files)
-  
-  # Define a small date window (±1 day)
-  start_date <- as.POSIXct(paste0(date, " 00:00:00"))
-  end_date <- as.POSIXct(paste0(date, " 23:59:59"))
-  
-  recent <- subset(info, mtime >= start_date & mtime <= end_date)
-  recent[order(recent$mtime, decreasing = TRUE), , drop = FALSE]
-}
-
-# Example:
-find_r_files_by_date("C:/Users/GCano")
