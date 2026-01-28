@@ -10,7 +10,7 @@ library(ggpubr)
 
 
 #read in data set
-matrix<- read_excel("C:/Users/tut43799/OneDrive - Temple University/Documents/GitHub/phd_code/phd_code/butterfly_data_16_25/complete pollard data CRT_January2026.xlsx")
+matrix<- read_excel("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_25/complete pollard data CRT_January2026.xlsx")
 
 #Combine the problem data, combine these names to what Clayton and I agreed to (excel sheet describing combinations)
 fix_matrix <- matrix |> 
@@ -404,13 +404,23 @@ ggarrange(connect_sep, nest_sep, h2_sep)
 
 #what happens if i throw climate into this mix------------------------
 
-monthly_climate <- summer_climate |>
-  mutate(year = year(date),
-         month = month(date)) |>
+climate<-read.csv("C:/Users/GCano/Documents/GitHub/phd_code/climate_data/weather data Harrisburg International.csv") |> 
+  janitor::clean_names()
+
+summer_clim<- climate |> 
+  mutate(month= month(date),
+         year= year(date)) |> 
+  filter(year>=2007,
+         month>=5,
+         month<=9)
+
+monthly_climate <- summer_clim |>
   group_by(year, month) |>
   summarise(
     max_temp = max(tmax, na.rm = TRUE),
     mean_precip= mean(prcp, na.rm= TRUE),
+    min_temp= min(tmin, na.rm= TRUE),
+    avg_temp= mean(((tmax+tmin)/2), na.rm= TRUE),
     .groups = "drop"
   )
 
@@ -437,6 +447,7 @@ net_butt = list()
 net_df = list()
 ind = list()
 select= list ()
+ind_list= list()
 
 for(i in 1:nrow(ym)) {
   select[[i]] = data |> 
@@ -459,8 +470,14 @@ for(i in 1:nrow(ym)) {
   
   # Compute network indices
   ind[[i]] <- networklevel(net_df[[i]], index = c("connectance", "nestedness", "H2"))
-  
-}
+  ind_list[[i]] <- list(
+    year  = ym$year[i],
+    month = ym$month[i],
+    year.month = ym$year.month[i],
+    ind = ind
+  )
+      
+  }
 
 
 
@@ -469,6 +486,7 @@ net_butt = list()
 net_df = list()
 ind = list()
 select= list ()
+ind_list= list()
 
 
 for(i in 1:nrow(ym)) {
@@ -493,7 +511,7 @@ for(i in 1:nrow(ym)) {
    #     return(NULL)}
   
   # Compute network indices
-  ind[[i]] <- networklevel(net_df[[i]], index = c("connectance", "nestedness", "H2"))
+  ind[[i]] <- networklevel(net_df[[i]], index = c("connectance", "nestedness", "H2")
   
 }
 
@@ -563,3 +581,15 @@ ggplot(network_by_climate, aes(x=precip, y= H2))+
   geom_point()+
   geom_smooth(method=lm)+
   scale_x_continuous(limits = c(0,.4))
+
+
+#climate in months
+
+ym_clim<- monthly_climate |> 
+  mutate(ym=paste(year, month, sep = "."))
+
+#I am confused as to how some ym combos have two sets of values??
+ind_df<- as.data.frame(do.call(rbind, ind_list))
+
+
+network_clim<- merge(ym_clim, ind, by= "ym")
