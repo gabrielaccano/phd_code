@@ -10,7 +10,7 @@ library(ggpubr)
 
 
 #read in data set
-matrix<- read_excel("C:/Users/GCano/Documents/GitHub/phd_code/butterfly_data_16_25/complete pollard data CRT_January2026.xlsx")
+matrix<- read_excel("C:/Users/tut43799/OneDrive - Temple University/Documents/GitHub/phd_code/phd_code/butterfly_data_16_25/complete pollard data CRT_January2026.xlsx")
 
 #Combine the problem data, combine these names to what Clayton and I agreed to (excel sheet describing combinations)
 fix_matrix <- matrix |> 
@@ -416,56 +416,84 @@ monthly_climate <- summer_climate |>
 
 #function making connectance, nestedness, and h2 values for each month/year combination
 
-year_months <- expand.grid(
-  year = 2007:2025,
-  month = 5:9) |> 
-  mutate(year.month = interaction(year, month))
+ym = expand_grid(year = 2007:2025,
+                 month = 5:9)
+ym$year.month = interaction(ym$year, ym$month, drop = TRUE)
 
+data = use_butt |> 
+  mutate(month = as.numeric(month(date)),
+         year.month = interaction(year, month, drop = TRUE)) %>% 
+  filter(year.month %in% ym$year.month)
 
+ym= ym %>% 
+  filter(year.month %in% data$year.month)
 
+ym$year.month= droplevels(ym$year.month)
 
-y = list()
-m = list()
+data$year.month = droplevels(data$year.month)
+
 y.m = list()
-use_butt = list()
-use_butt2 = list()
 net_butt = list()
 net_df = list()
 ind = list()
+select= list ()
 
-g_sp_matrix = g_sp_matrix |> 
-  filter(butterfly_species_cleaned %in% highlight_butt$butterfly_species_cleaned,
-         year.month %in% year_months$year.month) |> 
-  mutate(year = as.numeric(year),
-         month = as.numeric(month),
-         year.month = interaction(year, month, drop = TRUE))
-g_sp_matrix$year.month = drop.levels(g_sp_matrix$year.month)
-
-for(i in 1:nrow(year_months)) {
+for(i in 1:nrow(ym)) {
+  select[[i]] = data |> 
+    filter(year.month == ym$year.month[[i]])
+  select[[i]] = data.frame(select[[i]])
   
-  # y.m[i] = year_months$year.month[i]
+  net_butt[[i]] <- table(
+    select[[i]]$butterfly_species_cleaned,
+    select[[i]]$nectar_species_cleaned
+  )
   
-  # Filter for this year
-  use_butt[i] = g_sp_matrix |> 
-           filter(year == year_months$year[i],
-                  month == year_months$month[i])
-  
-  # Create bipartite matrix
-  net_butt[i] <- table(use_butt$butterfly_species_cleaned[i],
-                    use_butt$nectar_species_cleaned[i])
-  
-  net_df[i] <- as.matrix(net_butt[i])
+  net_df[[i]] <- as.matrix(net_butt[[i]])
   
   #drops empty rows/columns because not every combination happens every month
-  net_df[i] <- net_df[i][rowSums(net_df[i]) > 0, colSums(net_df[i]) > 0]
+  net_df[[i]] <- net_df[[i]][rowSums(net_df[[i]]) > 0, colSums(net_df[[i]]) > 0, drop= FALSE]
   #Making sure there are enough observations
-  if (nrow(net_df[i]) < 2 || ncol(net_df[i]) < 2) return(NULL)
+   #if (nrow(net_df[[i]]) < 2 ||
+       #ncol(net_df[[i]]) < 2) {
+      # return(NULL)}
   
   # Compute network indices
-  ind[i] <- networklevel(net_df[i], index = c("connectance", "nestedness", "H2"))
+  ind[[i]] <- networklevel(net_df[[i]], index = c("connectance", "nestedness", "H2"))
   
+}
+
+
+
+y.m = list()
+net_butt = list()
+net_df = list()
+ind = list()
+select= list ()
+
+
+for(i in 1:nrow(ym)) {
   
+  select[[i]] = data |> 
+    filter(year.month == ym$year.month[[i]])
+  select[[i]] = data.frame(select[[1]])
   
+  net_butt[[i]] <- table(
+    new$butterfly_species_cleaned,
+    new$nectar_species_cleaned
+  )
+  
+  net_df[[i]] <- as.matrix(net_butt[[i]])
+  
+  #drops empty rows/columns because not every combination happens every month
+  net_df[[i]] <- net_df[[i]][rowSums(net_df[[i]]) > 0, colSums(net_df[[i]]) > 0]
+  #Making sure there are enough observations
+   # if (is.null(net_df[[i]]) ||
+   #     nrow(net_df[[i]]) < 2 ||
+   #     ncol(net_df[[i]]) < 2) {
+   #     return(NULL)}
+  
+  # Compute network indices
+  ind[[i]] <- networklevel(net_df[[i]], index = c("connectance", "nestedness", "H2"))
   
 }
 
