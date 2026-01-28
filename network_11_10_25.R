@@ -471,87 +471,100 @@ for(i in 1:nrow(ym)) {
   # Compute network indices
   ind[[i]] <- networklevel(net_df[[i]], index = c("connectance", "nestedness", "H2"))
   ind_list[[i]] <- list(
-    year  = ym$year[i],
-    month = ym$month[i],
-    year.month = ym$year.month[i],
-    ind = ind
+    year  = ym$year[[i]],
+    month = ym$month[[i]],
+    year.month = ym$year.month[[i]],
+    ind = ind[[i]]
   )
       
-  }
-
-
-
-y.m = list()
-net_butt = list()
-net_df = list()
-ind = list()
-select= list ()
-ind_list= list()
-
-
-for(i in 1:nrow(ym)) {
-  
-  select[[i]] = data |> 
-    filter(year.month == ym$year.month[[i]])
-  select[[i]] = data.frame(select[[1]])
-  
-  net_butt[[i]] <- table(
-    new$butterfly_species_cleaned,
-    new$nectar_species_cleaned
-  )
-  
-  net_df[[i]] <- as.matrix(net_butt[[i]])
-  
-  #drops empty rows/columns because not every combination happens every month
-  net_df[[i]] <- net_df[[i]][rowSums(net_df[[i]]) > 0, colSums(net_df[[i]]) > 0]
-  #Making sure there are enough observations
-   # if (is.null(net_df[[i]]) ||
-   #     nrow(net_df[[i]]) < 2 ||
-   #     ncol(net_df[[i]]) < 2) {
-   #     return(NULL)}
-  
-  # Compute network indices
-  ind[[i]] <- networklevel(net_df[[i]], index = c("connectance", "nestedness", "H2")
-  
 }
 
-
-
-
-results_ym <- lapply(year_months, function(y) {
+#dataframe with indices and ym values
+ind_df <- do.call(rbind, lapply(ind_list, function(x) {
+  if (is.null(x)) return(NULL)
   
-  y<- year_months$year [y]
-  m<- year_months$month [y]
-  
-  # Filter for this year
-  use_butt <- g_sp_matrix |>
-    filter(butterfly_species_cleaned %in% highlight_butt$butterfly_species_cleaned) |>
-    filter(year == y) |> 
-    filter(month==m)
-  
-  # Create bipartite matrix
-  net_butt <- table(use_butt$butterfly_species_cleaned,
-                    use_butt$nectar_species_cleaned)
-  
-  net_df <- as.matrix(net_butt)
-  
-  #drops empty rows/columns because not every combination happens every month
-  net_df <- net_df[rowSums(net_df) > 0, colSums(net_df) > 0]
-  #Making sure there are enough observations
-  if (nrow(net_df) < 2 || ncol(net_df) < 2) return(NULL)
-  
-  # Compute network indices
-  ind <- networklevel(net_df, index = c("connectance", "nestedness", "H2"))
-  
-  # Return a row as a data frame
   data.frame(
-    year = y,
-    month= m,
-    connectance = ind["connectance"],
-    nestedness = ind["nestedness"],
-    H2 = ind["H2"]
-  )
-})
+    year        = x$year,
+    month       = x$month,
+    year_month  = x$year.month,
+    connectance = x$ind["connectance"],
+    nestedness  = x$ind["nestedness"],
+    H2          = x$ind["H2"]
+  )}))
+
+
+
+# y.m = list()
+# net_butt = list()
+# net_df = list()
+# ind = list()
+# select= list ()
+# ind_list= list()
+# 
+# 
+# for(i in 1:nrow(ym)) {
+#   
+#   select[[i]] = data |> 
+#     filter(year.month == ym$year.month[[i]])
+#   select[[i]] = data.frame(select[[1]])
+#   
+#   net_butt[[i]] <- table(
+#     new$butterfly_species_cleaned,
+#     new$nectar_species_cleaned
+#   )
+#   
+#   net_df[[i]] <- as.matrix(net_butt[[i]])
+#   
+#   #drops empty rows/columns because not every combination happens every month
+#   net_df[[i]] <- net_df[[i]][rowSums(net_df[[i]]) > 0, colSums(net_df[[i]]) > 0]
+#   #Making sure there are enough observations
+#    # if (is.null(net_df[[i]]) ||
+#    #     nrow(net_df[[i]]) < 2 ||
+#    #     ncol(net_df[[i]]) < 2) {
+#    #     return(NULL)}
+#   
+#   # Compute network indices
+#   ind[[i]] <- networklevel(net_df[[i]], index = c("connectance", "nestedness", "H2")
+#   
+# }
+# 
+# 
+# 
+# 
+# results_ym <- lapply(year_months, function(y) {
+#   
+#   y<- year_months$year [y]
+#   m<- year_months$month [y]
+#   
+#   # Filter for this year
+#   use_butt <- g_sp_matrix |>
+#     filter(butterfly_species_cleaned %in% highlight_butt$butterfly_species_cleaned) |>
+#     filter(year == y) |> 
+#     filter(month==m)
+#   
+#   # Create bipartite matrix
+#   net_butt <- table(use_butt$butterfly_species_cleaned,
+#                     use_butt$nectar_species_cleaned)
+#   
+#   net_df <- as.matrix(net_butt)
+#   
+#   #drops empty rows/columns because not every combination happens every month
+#   net_df <- net_df[rowSums(net_df) > 0, colSums(net_df) > 0]
+#   #Making sure there are enough observations
+#   if (nrow(net_df) < 2 || ncol(net_df) < 2) return(NULL)
+#   
+#   # Compute network indices
+#   ind <- networklevel(net_df, index = c("connectance", "nestedness", "H2"))
+#   
+#   # Return a row as a data frame
+#   data.frame(
+#     year = y,
+#     month= m,
+#     connectance = ind["connectance"],
+#     nestedness = ind["nestedness"],
+#     H2 = ind["H2"]
+#   )
+# })
 
 network_by_climate <- do.call(rbind, results)
 
@@ -586,10 +599,14 @@ ggplot(network_by_climate, aes(x=precip, y= H2))+
 #climate in months
 
 ym_clim<- monthly_climate |> 
-  mutate(ym=paste(year, month, sep = "."))
+  mutate(year_month=paste(year, month, sep = "."))
+ym_clim$year_month= droplevels(ym$year.month)
 
-#I am confused as to how some ym combos have two sets of values??
-ind_df<- as.data.frame(do.call(rbind, ind_list))
+#I lose one here, where does it go and which one is it? Does it matter?
+network_clim<- inner_join(ym_clim, ind_df, by= "year_month")
 
-
-network_clim<- merge(ym_clim, ind, by= "ym")
+network_clim |> 
+  filter(month.x==7) |> 
+  ggplot(aes(x=avg_temp, y= H2))+
+  geom_point()+
+  geom_smooth(method= "lm")
