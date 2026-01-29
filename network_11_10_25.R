@@ -606,7 +606,97 @@ ym_clim$year_month= droplevels(ym$year.month)
 network_clim<- inner_join(ym_clim, ind_df, by= "year_month")
 
 network_clim |> 
-  filter(month.x==7) |> 
-  ggplot(aes(x=avg_temp, y= H2))+
+  filter(month.x==8) |> 
+  ggplot(aes(x=avg_temp, y= connectance))+
   geom_point()+
   geom_smooth(method= "lm")
+
+
+#monthxyearxsite combo
+
+yms = expand_grid(year = 2007:2025,
+                 month = 5:9,
+                site  = sort(unique(data$field))) |> 
+  filter(!site %in% c("Boyer","Middlecreek"))
+
+yms$year.month.site = interaction(yms$year, yms$month, yms$site, drop = TRUE)
+
+data_site = use_butt |> 
+  mutate(month = as.numeric(month(date)),
+         year.month.site = interaction(year, month, field, drop = TRUE)) %>% 
+  filter(year.month.site %in% yms$year.month.site)
+
+yms= yms %>% 
+  filter(year.month.site %in% data_site$year.month.site)
+
+yms$year.month.site= droplevels(yms$year.month.site)
+
+data_site$year.month.site = droplevels(data_site$year.month.site)
+
+y.m.s = list()
+net_butt_s = list()
+net_df_s = list()
+ind_s = list()
+select_s= list ()
+ind_list_s= list()
+
+for(i in 1:nrow(yms)) {
+  select_s[[i]] = data_site |> 
+    filter(year.month.site == yms$year.month.site[[i]])
+  select_s[[i]] = data.frame(select_s[[i]])
+  
+  net_butt_s[[i]] <- table(
+    select_s[[i]]$butterfly_species_cleaned,
+    select_s[[i]]$nectar_species_cleaned
+  )
+  
+  net_df_s[[i]] <- as.matrix(net_butt_s[[i]])
+  
+  #drops empty rows/columns because not every combination happens every month
+  net_df_s[[i]] <- net_df_s[[i]][rowSums(net_df_s[[i]]) > 0, colSums(net_df_s[[i]]) > 0, drop= FALSE]
+  #Making sure there are enough observations
+  #if (nrow(net_df[[i]]) < 2 ||
+  #ncol(net_df[[i]]) < 2) {
+  # return(NULL)}
+  
+  # Compute network indices
+  ind_s[[i]] <- networklevel(net_df_s[[i]], index = c("connectance", "nestedness", "H2"))
+  ind_list_s[[i]] <- list(
+    year  = yms$year[[i]],
+    month = yms$month[[i]],
+    site= yms$site[[i]],
+    year.month.site = yms$year.month.site[[i]],
+    ind_s = ind_s[[i]]
+  )
+  
+}
+
+#dataframe with indices and yms values
+ind_df_s <- do.call(rbind, lapply(ind_list_s, function(x) {
+  if (is.null(x)) return(NULL)
+  
+  data.frame(
+    year        = x$year,
+    month       = x$month,
+    site= x$site,
+    year_month_site= x$year.month.site,
+    connectance = x$ind["connectance"],
+    nestedness  = x$ind["nestedness"],
+    H2          = x$ind["H2"]
+  )}))
+
+ind_df_s <- ind_df_s |> 
+  mutate(year_month=paste(year, month, sep = "."))
+ym_clim<- monthly_climate |> 
+  mutate(year_month=paste(year, month, sep = "."))
+ym_clim$year_month= droplevels(ym$year.month)
+
+#I lose five here, where does it go and which one is it? Does it matter?
+network_clim_s<- inner_join(ym_clim, ind_df_s, by= "year_month")
+
+#network indices with climate variables per site
+network_clim_s |> 
+  filter(month.x==6) |> 
+  ggplot(aes(x=mean_precip, y= H2, color= site))+
+  geom_point()+
+  geom_smooth(method= "lm", se= FALSE)
