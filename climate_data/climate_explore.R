@@ -26,7 +26,7 @@ grouped_climate<- summer_climate |>
   summarise(
     min_temp  = min(tmin, na.rm = TRUE),
     max_temp  = max(tmax, na.rm = TRUE),
-    mean_temp = mean(tavg, na.rm = TRUE),
+    mean_temp = mean(((tmax+tmin)/2), na.rm = TRUE),
     .groups = "drop"
   )
 
@@ -50,32 +50,32 @@ august<-grouped_climate |>
 september<- grouped_climate |> 
   filter(month==9)
 
-may_min<- ggplot(may, aes(x=year, y=min_temp))+
+may_min<- ggplot(may, aes(x=year, y=mean_temp))+
   geom_point()+
   geom_smooth(method=lm)+
   labs(title= "May")
 
-june_min<- ggplot(june, aes(x=year, y=min_temp))+
+june_min<- ggplot(june, aes(x=year, y=mean_temp))+
   geom_point()+
   geom_smooth(method=lm)+
   labs(title= "June")
 
-july_min<- ggplot(july, aes(x=year, y=min_temp))+
+july_min<- ggplot(july, aes(x=year, y=mean_temp))+
   geom_point()+
   geom_smooth(method=lm)+
   labs(title= "July")
 
-august_min<- ggplot(august, aes(x=year, y=min_temp))+
+august_min<- ggplot(august, aes(x=year, y=mean_temp))+
   geom_point()+
   geom_smooth(method=lm)+
   labs(title= "August")
 
-sep_min<- ggplot(september, aes(x=year, y=min_temp))+
+sep_min<- ggplot(september, aes(x=year, y=mean_temp))+
   geom_point()+
   geom_smooth(method=lm)+
   labs(title= "September")
 
-ggarrange(may_min, june_min, july_min, august_min, sep_min)
+ggarrange(june_min, july_min, august_min, sep_min)
 
 
 
@@ -107,3 +107,39 @@ ggplot(summer_precip, aes(x = year, y = factor(month), fill = mean_precip)) +
 ggplot(summer_precip, aes(x= year, y=total_precip, color=as.factor(month)))+
   geom_point()+
   geom_smooth(method= lm, se= FALSE)
+
+
+june<-summer_precip |> 
+  filter(month==6)
+
+july<-summer_precip |> 
+  filter(month==7)
+
+august<-summer_precip |> 
+  filter(month==8)
+
+september<- summer_precip |> 
+  filter(month==9)
+
+
+june_prcp<- ggplot(june, aes(x=year, y=mean_precip))+
+  geom_point()+
+  geom_smooth(method=lm)+
+  labs(title= "June")
+
+july_prcp<- ggplot(july, aes(x=year, y=mean_precip))+
+  geom_point()+
+  geom_smooth(method=lm)+
+  labs(title= "July")
+
+august_prcp<- ggplot(august, aes(x=year, y=mean_precip))+
+  geom_point()+
+  geom_smooth(method=lm)+
+  labs(title= "August")
+
+sep_prcp<- ggplot(september, aes(x=year, y=mean_precip))+
+  geom_point()+
+  geom_smooth(method=lm)+
+  labs(title= "September")
+
+ggarrange(june_prcp, july_prcp, august_prcp, sep_prcp)

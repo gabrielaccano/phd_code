@@ -7,6 +7,8 @@ library(tidyverse)
 library(readxl)
 library(bipartite)
 library(ggpubr)
+library(glmmTMB)
+library(car)
 
 
 #read in data set
@@ -66,7 +68,7 @@ net_df<- as.data.frame.matrix(net_butt)
 plotweb(net_df,
         scaling = "relative",
         higher_color = "pink",
-        lower_color = "lightblue",
+        lower_color = "gray",
         text_size = .5,
         sorting = "decr")#web
 
@@ -126,15 +128,15 @@ network_indices_by_year <- do.call(rbind, results_year)
 
 connect<- ggplot(network_indices_by_year, aes(y=connectance, x=year))+
   geom_point()+
-  geom_smooth()
+  geom_smooth(method= "lm")
 
 nest<- ggplot(network_indices_by_year, aes(y=nestedness, x=year))+
   geom_point()+
-  geom_smooth()
+  geom_smooth(method= "lm")
 
 h2<- ggplot(network_indices_by_year, aes(y=H2, x=year))+
   geom_point()+
-  geom_smooth()
+  geom_smooth(method= "lm")
 
 
 ggarrange(connect, nest, h2)
@@ -156,6 +158,13 @@ jun_net_df<- as.data.frame.matrix(jun_net_butt)
 jun_net_indices<- networklevel(jun_net_df, index=c("connectance", "nestedness", "H2"))
 print(jun_net_indices)
 
+plotweb(jun_net_df,
+        scaling = "relative",
+        higher_color = "pink",
+        lower_color = "gray",
+        text_size = .5,
+        sorting = "decr")
+
 #connectance  nestedness          H2 
 #0.1748971   5.1774693   0.2244043 
 
@@ -165,6 +174,13 @@ jul_net_butt <- table(jul_butt$butterfly_species_cleaned, jul_butt$nectar_specie
 jul_net_df<- as.data.frame.matrix(jul_net_butt)
 jul_net_indices<- networklevel(jul_net_df, index=c("connectance", "nestedness", "H2"))
 print(jul_net_indices)
+
+plotweb(jul_net_df,
+        scaling = "relative",
+        higher_color = "pink",
+        lower_color = "gray",
+        text_size = .5,
+        sorting = "decr")
 
 #connectance  nestedness          H2 
 #0.2095960   8.3120520   0.1948036 
@@ -176,6 +192,13 @@ aug_net_df<- as.data.frame.matrix(aug_net_butt)
 aug_net_indices<- networklevel(aug_net_df, index=c("connectance", "nestedness", "H2"))
 print(aug_net_indices)
 
+plotweb(aug_net_df,
+        scaling = "relative",
+        higher_color = "pink",
+        lower_color = "gray",
+        text_size = .5,
+        sorting = "decr")
+
 #connectance  nestedness          H2 
 #0.2193126   6.3256924   0.1812610
 
@@ -186,6 +209,13 @@ sep_net_df<- as.data.frame.matrix(sep_net_butt)
 sep_net_indices<- networklevel(sep_net_df, index=c("connectance", "nestedness", "H2"))
 print(sep_net_indices)
 
+plotweb(sep_net_df,
+        scaling = "relative",
+        higher_color = "pink",
+        lower_color = "gray",
+        text_size = .5,
+        sorting = "decr")
+
 #connectance  nestedness          H2 
 #0.1801948   8.9641785   0.3715341
 
@@ -194,15 +224,15 @@ network_in_by_month<-rbind(network_indices_by_aug, network_indices_by_july, netw
 
 connect_month<- ggplot(network_in_by_month, aes(y=connectance, x=year, color=as.factor(month)))+
   geom_point(alpha=.4)+
-  geom_smooth(se=FALSE)
+  geom_smooth(method= "lm", se=FALSE)
 
 nest_month<- ggplot(network_in_by_month, aes(y=nestedness, x=year, color=as.factor(month)))+
   geom_point(alpha=.4)+
-  geom_smooth(se=FALSE)
+  geom_smooth(method= "lm", se=FALSE)
 
 h2_month<- ggplot(network_in_by_month, aes(y=H2, x=year, color= as.factor(month)))+
   geom_point(alpha=.4)+
-  geom_smooth(se=FALSE)
+  geom_smooth(method= "lm", se=FALSE)
 
 ggarrange(connect_month, nest_month, h2_month)
 #june-----------
@@ -605,11 +635,66 @@ ym_clim$year_month= droplevels(ym$year.month)
 #I lose one here, where does it go and which one is it? Does it matter?
 network_clim<- inner_join(ym_clim, ind_df, by= "year_month")
 
-network_clim |> 
-  filter(month.x==8) |> 
-  ggplot(aes(x=avg_temp, y= connectance))+
+jun_temp<-network_clim |> 
+  filter(month.x==6) |> 
+  ggplot(aes(x=avg_temp, y= H2))+
   geom_point()+
-  geom_smooth(method= "lm")
+  geom_smooth(method= "lm")+
+  labs(title= "june")
+
+jul_temp<-network_clim |> 
+  filter(month.x==7) |> 
+  ggplot(aes(x=avg_temp, y= H2))+
+  geom_point()+
+  geom_smooth(method= "lm")+
+  labs(title= "july")
+
+aug_temp<-network_clim |> 
+  filter(month.x==8) |> 
+  ggplot(aes(x=avg_temp, y= H2))+
+  geom_point()+
+  geom_smooth(method= "lm")+
+  labs(title= "aug")
+
+sep_temp<-network_clim |> 
+  filter(month.x==9) |> 
+  ggplot(aes(x=avg_temp, y= H2))+
+  geom_point()+
+  geom_smooth(method= "lm")+
+  labs(title= "sep")
+
+ggarrange(jun_temp, jul_temp, aug_temp, sep_temp)
+
+jun_precip<-network_clim |> 
+  filter(month.x==6) |> 
+  ggplot(aes(x=mean_precip, y= connectance))+
+  geom_point()+
+  geom_smooth(method= "lm")+
+  labs(title= "june")
+
+jul_precip<-network_clim |> 
+  filter(month.x==7) |> 
+  ggplot(aes(x=mean_precip, y= connectance))+
+  geom_point()+
+  geom_smooth(method= "lm")+
+  labs(title= "july")
+
+aug_precip<-network_clim |> 
+  filter(month.x==8) |> 
+  ggplot(aes(x=mean_precip, y= connectance))+
+  geom_point()+
+  geom_smooth(method= "lm")+
+  labs(title= "aug")
+
+sep_precip<-network_clim |> 
+  filter(month.x==9) |> 
+  ggplot(aes(x=mean_precip, y= connectance))+
+  geom_point()+
+  geom_smooth(method= "lm")+
+  labs(title= "sep")
+
+ggarrange(jun_precip, jul_precip, aug_precip, sep_precip)
+
 
 
 #monthxyearxsite combo
@@ -697,6 +782,25 @@ network_clim_s<- inner_join(ym_clim, ind_df_s, by= "year_month")
 #network indices with climate variables per site
 network_clim_s |> 
   filter(month.x==6) |> 
-  ggplot(aes(x=mean_precip, y= H2, color= site))+
+  ggplot(aes(x=avg_temp, y= H2, color= site))+
   geom_point()+
   geom_smooth(method= "lm", se= FALSE)
+
+
+network_clim_s<-network_clim_s |> 
+  mutate(year= as.factor(year.x),
+         month= as.factor(month.x)) |> 
+  filter(month !=5)
+
+#Learning to run a model----------------------
+mod<-glmmTMB(nestedness~avg_temp+ month+ avg_temp:month,
+             data=network_clim_s)
+
+summary(mod)
+
+test<-Anova(mod, type=3)
+
+
+
+ggplot(network_clim_s, aes(x=H2))+
+  geom_histogram()
