@@ -92,7 +92,6 @@ print(net_indices)
 sp_indices<- specieslevel(net_butt, level= "both")
 print(sp_indices)
 
-
 #do the network indices change over years?-------------------------
 
 
@@ -457,7 +456,7 @@ monthly_climate <- summer_clim |>
 #function making connectance, nestedness, and h2 values for each month/year combination
 
 ym = expand_grid(year = 2007:2025,
-                 month = 5:9)
+                 month = 6:9)
 ym$year.month = interaction(ym$year, ym$month, drop = TRUE)
 
 data = use_butt |> 
@@ -700,7 +699,7 @@ ggarrange(jun_precip, jul_precip, aug_precip, sep_precip)
 #monthxyearxsite combo
 
 yms = expand_grid(year = 2007:2025,
-                 month = 5:9,
+                 month = 6:9,
                 site  = sort(unique(data$field))) |> 
   filter(!site %in% c("Boyer","Middlecreek"))
 
@@ -724,6 +723,7 @@ net_df_s = list()
 ind_s = list()
 select_s= list ()
 ind_list_s= list()
+flagged_it= c()
 
 for(i in 1:nrow(yms)) {
   select_s[[i]] = data_site |> 
@@ -755,6 +755,38 @@ for(i in 1:nrow(yms)) {
   )
   
 }
+
+#check for errors
+
+flagged_iterations <- c()
+
+results <- vector("list", length(net_df_s))
+
+for (i in seq_along(net_df_s)) {
+  
+  results[[i]] <- withCallingHandlers(
+    
+    networklevel(
+      net_df_s[[i]], 
+      index = c("connectance", "nestedness", "H2")
+    ),
+    
+    warning = function(w) {
+      if (grepl("Web is really too small", w$message)) {
+        cat("Too small web at iteration:", i, "\n")
+        flagged_iterations <<- c(flagged_iterations, i)
+      }
+      invokeRestart("muffleWarning")
+    }
+  )
+}
+
+flagged_iterations <- c(26, 46, 50, 51, 61, 95, 114, 121, 140, 144, 157, 180, 222, 260)  # your flagged indices
+
+yms[flagged_iterations, ]
+
+
+
 
 #dataframe with indices and yms values
 ind_df_s <- do.call(rbind, lapply(ind_list_s, function(x) {
@@ -804,3 +836,34 @@ test<-Anova(mod, type=3)
 
 ggplot(network_clim_s, aes(x=H2))+
   geom_histogram()
+
+
+
+#regal # of obs
+obs<-fix_matrix |> 
+  filter(year>=2007) |> 
+  group_by(year) |> 
+  summarise(total_obs= n())
+
+ggplot(obs, aes(x=year, y= total_obs))+
+  geom_point()
+
+
+regal_obs<- fix_matrix |> 
+  filter(butterfly_species_cleaned== "ARID") |> 
+  group_by(year) |> 
+  summarize(total_obs= n())
+
+
+ggplot(regal_obs, aes(x= year, y= total_obs))+
+  geom_point()+
+  geom_smooth()
+
+clim_regal<- inner_join(regal_obs, climate, by="date")
+
+clim_regal<-clim_regal |> 
+  mutate(avg_temp= (tmax+tmin/2))
+
+ggplot(clim_regal, aes(x=avg_temp, y= total_obs))+
+  geom_point()+
+  geom_smooth(method= "loess", se= FALSE)

@@ -3,6 +3,7 @@
 library (tidyverse)
 library(readxl)
 library(ggpubr)
+library(emmeans)
 
 climate<- read_csv("C:/Users/GCano/Documents/GitHub/phd_code/climate_data/weather data Harrisburg International.csv")
 
@@ -28,11 +29,62 @@ grouped_climate<- summer_climate |>
     max_temp  = max(tmax, na.rm = TRUE),
     mean_temp = mean(((tmax+tmin)/2), na.rm = TRUE),
     .groups = "drop"
+  ) |> 
+  mutate(month= as.factor(month))
+
+avg_clim<- summer_climate |> 
+  mutate(mean_t=((tmax+tmin)/2)) |> 
+  mutate(
+    year  = year(date),
+    month = as.factor(month(date))
   )
 
-ggplot(grouped_climate, aes(x=year, y=max_temp, color=as.factor(month)))+
+ggplot(avg_clim, aes(x=year, y=mean_t))+
+  geom_smooth(method="lm")+
+  facet_wrap(~month)
+
+#staistical model for temperature
+mod<- lm(mean_t ~ year + month + year:month, data = avg_clim)
+summary(mod)
+(car::Anova(mod, type = 3))
+
+#posthoc: categorical vars
+(emm.month = emmeans(mod, specs = pairwise ~ month, 
+                    type = "response", adjust = "tukey"))
+
+# posthoc plotting continuous vars
+emmip(mod, month ~ year, cov.reduce = range, type = "response")
+
+# posthoc continuous vars
+(emm.monthyear = emtrends(mod, pairwise ~ month, var = "year", 
+                          adjust = "tukey", type= "response") |> test(null=0))
+
+
+#precipitiation
+ggplot(avg_clim, aes(x=year, y=prcp))+
   geom_point()+
-  geom_smooth(method="lm", se= FALSE)
+  geom_smooth(method="lm")+
+  facet_wrap(~month)
+
+all_clim<-climate |>
+  mutate(year  = year(date),
+         month = month(date))
+
+spring<- all_clim |> 
+  filter(month%in%c(3,4,5))
+  
+
+ggplot(spring, aes(x=year, y=prcp))+
+  geom_smooth()+
+  facet_wrap(~month)
+
+
+#statistical model for precipitation
+mod_p<- lm(prcp ~ year + month + year:month, data = spring)
+summary(mod_p)
+(car::Anova(mod_p, type = 3))
+
+
 
 #each month individually, min temp----------
 may<-grouped_climate |> 
